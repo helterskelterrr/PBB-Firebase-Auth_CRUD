@@ -3,6 +3,7 @@ import 'package:firebase/firestore.dart';
 import 'package:firebase/screen/login.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -24,10 +25,10 @@ class _HomeScreenState extends State<HomeScreen> {
     Navigator.pushReplacementNamed(context, 'login');
   }
 
-  void openNoteBox({String? docId, String? title, String? content, String? tgl, String? label}) {
+  void openNoteBox({String? docId, String? title, String? content, DateTime? tgl, String? label}) {
     titleController.text = title ?? '';
     contentController.text = content ?? '';
-    tglController.text = tgl ?? '';
+    tglController.text = tgl != null ? DateFormat('yyyy-MM-dd').format(tgl) : '';
     labelController.text = label ?? '';
 
     showDialog(
@@ -40,7 +41,27 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               TextField(controller: titleController, decoration: const InputDecoration(labelText: "Title")),
               TextField(controller: contentController, decoration: const InputDecoration(labelText: "Content")),
-              TextField(controller: tglController, decoration: const InputDecoration(labelText: "Tanggal (tgl)")),
+              TextField(
+                controller: tglController,
+                decoration: const InputDecoration(
+                  labelText: "Tanggal",
+                  suffixIcon: Icon(Icons.calendar_today),
+                ),
+                readOnly: true,
+                onTap: () async {
+                  DateTime? pickedDate = await showDatePicker(
+                    context: context,
+                    initialDate: DateTime.now(),
+                    firstDate: DateTime(2000),
+                    lastDate: DateTime(2101),
+                  );
+                  if (pickedDate != null) {
+                    setState(() {
+                      tglController.text = DateFormat('yyyy-MM-dd').format(pickedDate);
+                    });
+                  }
+                },
+              ),
               TextField(controller: labelController, decoration: const InputDecoration(labelText: "Label")),
             ],
           ),
@@ -50,9 +71,20 @@ class _HomeScreenState extends State<HomeScreen> {
           ElevatedButton(
             onPressed: () {
               if (docId == null) {
-                firestoreService.addNote(titleController.text, contentController.text, tglController.text, labelController.text);
+                firestoreService.addNote(
+                  titleController.text,
+                  contentController.text,
+                  tglController.text,
+                  labelController.text,
+                );
               } else {
-                firestoreService.updateNote(docId, titleController.text, contentController.text, tglController.text, labelController.text);
+                firestoreService.updateNote(
+                  docId,
+                  titleController.text,
+                  contentController.text,
+                  tglController.text,
+                  labelController.text,
+                );
               }
               Navigator.pop(context);
             },
@@ -85,13 +117,13 @@ class _HomeScreenState extends State<HomeScreen> {
               child: const Icon(Icons.add),
             ),
             body: StreamBuilder<QuerySnapshot>(
-              stream: firestoreService.getNotes(),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
+              stream: firestoreService.getNotes(snapshot.data?.uid), // Mengirim UID user saat ini
+              builder: (context, firestoreSnapshot) {
+                if (firestoreSnapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
                 }
-                if (snapshot.hasData && snapshot.data!.docs.isNotEmpty) {
-                  var notes = snapshot.data!.docs;
+                if (firestoreSnapshot.hasData && firestoreSnapshot.data!.docs.isNotEmpty) {
+                  var notes = firestoreSnapshot.data!.docs;
                   return GridView.builder(
                     padding: const EdgeInsets.all(12),
                     gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -138,7 +170,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                       docId: id,
                                       title: data['title'],
                                       content: data['content'],
-                                      tgl: data['tgl'],
+                                      tgl: data['tgl'] != null ? DateTime.tryParse(data['tgl']) : null,
                                       label: data['label'],
                                     ),
                                   ),
