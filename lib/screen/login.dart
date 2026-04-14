@@ -13,87 +13,142 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController = TextEditingController();
 
   bool _isLoading = false;
-  String _errorCode = "";
+  String _errorMessage = "";
 
   void navigateRegister() {
-    if (!context.mounted) return;
     Navigator.pushReplacementNamed(context, 'register');
   }
 
-  void navigateHome() {
-    if (!context.mounted) return;
-    Navigator.pushReplacementNamed(context, 'home');
-  }
-
   void signIn() async {
+    if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
+      setState(() => _errorMessage = "Please fill in all fields");
+      return;
+    }
+
     setState(() {
       _isLoading = true;
-      _errorCode = "";
+      _errorMessage = "";
     });
 
     try {
       await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: _emailController.text,
-        password: _passwordController.text,
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
       );
-      navigateHome();
+      if (mounted) Navigator.pushReplacementNamed(context, 'home');
     } on FirebaseAuthException catch (e) {
       setState(() {
-        _errorCode = e.code;
+        _errorMessage = e.message ?? e.code;
       });
+    } catch (e) {
+      setState(() => _errorMessage = "An unexpected error occurred");
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
-
-    setState(() {
-      _isLoading = false;
-    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Login'),
-        centerTitle: true,
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
+      backgroundColor: Colors.white,
+      body: SafeArea(
         child: Center(
-          child: ListView(
-            children: [
-              const SizedBox(height: 48),
-              Icon(Icons.lock_outline, size: 100, color: Colors.blue[200]),
-              const SizedBox(height: 48),
-              TextField(
-                controller: _emailController,
-                decoration: const InputDecoration(label: Text('Email')),
-              ),
-              TextField(
-                controller: _passwordController,
-                obscureText: true,
-                decoration: const InputDecoration(label: Text('Password')),
-              ),
-              const SizedBox(height: 24),
-              _errorCode != ""
-                  ? Column(
-                  children: [Text(_errorCode), const SizedBox(height: 24)])
-                  : const SizedBox(height: 0),
-              OutlinedButton(
-                onPressed: signIn,
-                child: _isLoading
-                    ? const CircularProgressIndicator()
-                    : const Text('Login'),
-              ),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text('Don\'t have an account?'),
-                  TextButton(
-                    onPressed: navigateRegister,
-                    child: const Text('Register'),
-                  )
-                ],
-              )
-            ],
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 30),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Icon(Icons.notes_rounded, size: 80, color: Colors.black87),
+                const SizedBox(height: 20),
+                const Text(
+                  "Welcome Back",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.black87),
+                ),
+                const Text(
+                  "Sign in to continue to your notes",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 14, color: Colors.grey),
+                ),
+                const SizedBox(height: 40),
+                
+                // Email Field
+                TextField(
+                  controller: _emailController,
+                  decoration: InputDecoration(
+                    hintText: "Email",
+                    filled: true,
+                    fillColor: Colors.grey[100],
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                    prefixIcon: const Icon(Icons.email_outlined, size: 20),
+                  ),
+                ),
+                const SizedBox(height: 15),
+                
+                // Password Field
+                TextField(
+                  controller: _passwordController,
+                  obscureText: true,
+                  decoration: InputDecoration(
+                    hintText: "Password",
+                    filled: true,
+                    fillColor: Colors.grey[100],
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                    prefixIcon: const Icon(Icons.lock_outline_rounded, size: 20),
+                  ),
+                ),
+                
+                if (_errorMessage.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 15),
+                    child: Text(
+                      _errorMessage,
+                      style: const TextStyle(color: Colors.redAccent, fontSize: 13),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                  
+                const SizedBox(height: 30),
+                
+                // Login Button
+                ElevatedButton(
+                  onPressed: _isLoading ? null : signIn,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.black87,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    elevation: 0,
+                  ),
+                  child: _isLoading
+                      ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                      : const Text("Login", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                ),
+                
+                const SizedBox(height: 20),
+                
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text("New here? ", style: TextStyle(color: Colors.grey)),
+                    GestureDetector(
+                      onTap: navigateRegister,
+                      child: const Text(
+                        "Create Account",
+                        style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),

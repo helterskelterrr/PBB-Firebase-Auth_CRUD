@@ -34,20 +34,31 @@ class _HomeScreenState extends State<HomeScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(docId == null ? "Tambah Note" : "Edit Note"),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        title: Text(docId == null ? "Catatan Baru" : "Edit Catatan", 
+          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 18)),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              TextField(controller: titleController, decoration: const InputDecoration(labelText: "Title")),
-              TextField(controller: contentController, decoration: const InputDecoration(labelText: "Content")),
+              TextField(
+                controller: titleController,
+                decoration: const InputDecoration(labelText: "Judul", alignLabelWithHint: true),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: contentController,
+                maxLines: 3,
+                decoration: const InputDecoration(labelText: "Isi Catatan", alignLabelWithHint: true),
+              ),
+              const SizedBox(height: 8),
               TextField(
                 controller: tglController,
+                readOnly: true,
                 decoration: const InputDecoration(
                   labelText: "Tanggal",
-                  suffixIcon: Icon(Icons.calendar_today),
+                  suffixIcon: Icon(Icons.calendar_today, size: 18),
                 ),
-                readOnly: true,
                 onTap: () async {
                   DateTime? pickedDate = await showDatePicker(
                     context: context,
@@ -62,13 +73,20 @@ class _HomeScreenState extends State<HomeScreen> {
                   }
                 },
               ),
-              TextField(controller: labelController, decoration: const InputDecoration(labelText: "Label")),
+              const SizedBox(height: 8),
+              TextField(
+                controller: labelController,
+                decoration: const InputDecoration(labelText: "Label (opsional)"),
+              ),
             ],
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Batal")),
-          ElevatedButton(
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Batal", style: TextStyle(color: Colors.grey)),
+          ),
+          TextButton(
             onPressed: () {
               if (docId == null) {
                 firestoreService.addNote(
@@ -88,7 +106,7 @@ class _HomeScreenState extends State<HomeScreen> {
               }
               Navigator.pop(context);
             },
-            child: const Text("Simpan"),
+            child: const Text("Simpan", style: TextStyle(fontWeight: FontWeight.bold)),
           )
         ],
       ),
@@ -102,92 +120,125 @@ class _HomeScreenState extends State<HomeScreen> {
       builder: (context, snapshot) {
         if (snapshot.hasData) {
           return Scaffold(
+            backgroundColor: const Color(0xFFF5F5F5),
             appBar: AppBar(
-              title: const Text('Notes CRUD - Nadip'),
-              backgroundColor: Colors.blueGrey,
+              title: const Text('Catatan Saya', style: TextStyle(fontWeight: FontWeight.w600)),
+              elevation: 0,
+              backgroundColor: Colors.white,
+              foregroundColor: Colors.black87,
               actions: [
                 IconButton(
                   onPressed: () => logout(context),
-                  icon: const Icon(Icons.logout),
+                  icon: const Icon(Icons.logout_rounded),
                 )
               ],
             ),
             floatingActionButton: FloatingActionButton(
               onPressed: () => openNoteBox(),
-              child: const Icon(Icons.add),
+              backgroundColor: Colors.black87,
+              child: const Icon(Icons.add, color: Colors.white),
             ),
             body: StreamBuilder<QuerySnapshot>(
-              stream: firestoreService.getNotes(snapshot.data?.uid), // Mengirim UID user saat ini
+              stream: firestoreService.getNotes(snapshot.data?.uid),
               builder: (context, firestoreSnapshot) {
                 if (firestoreSnapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
+                  return const Center(child: CircularProgressIndicator(color: Colors.black87));
                 }
                 if (firestoreSnapshot.hasData && firestoreSnapshot.data!.docs.isNotEmpty) {
                   var notes = firestoreSnapshot.data!.docs;
                   return GridView.builder(
-                    padding: const EdgeInsets.all(12),
+                    padding: const EdgeInsets.all(16),
                     gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: 2,
-                      crossAxisSpacing: 10,
-                      mainAxisSpacing: 10,
+                      crossAxisSpacing: 12,
+                      mainAxisSpacing: 12,
                       childAspectRatio: 0.8,
                     ),
                     itemCount: notes.length,
                     itemBuilder: (context, index) {
-                      var document = notes[index];
-                      var data = document.data() as Map<String, dynamic>;
-                      String id = document.id;
+                      var data = notes[index].data() as Map<String, dynamic>;
+                      String id = notes[index].id;
 
-                      return Card(
-                        elevation: 4,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                        child: Padding(
-                          padding: const EdgeInsets.all(10),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                data['title'] ?? '',
-                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              const Divider(),
-                              Expanded(
-                                child: Text(
-                                  data['content'] ?? '',
-                                  maxLines: 3,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                              Text("Tgl: ${data['tgl']}", style: const TextStyle(fontSize: 10, color: Colors.grey)),
-                              Text("Label: ${data['label']}", style: const TextStyle(fontSize: 10, color: Colors.blue)),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.end,
+                      return Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.04),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(12),
+                            onTap: () => openNoteBox(
+                              docId: id,
+                              title: data['title'],
+                              content: data['content'],
+                              tgl: data['tgl'] != null ? DateTime.tryParse(data['tgl']) : null,
+                              label: data['label'],
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.all(12),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  IconButton(
-                                    icon: const Icon(Icons.edit, size: 18),
-                                    onPressed: () => openNoteBox(
-                                      docId: id,
-                                      title: data['title'],
-                                      content: data['content'],
-                                      tgl: data['tgl'] != null ? DateTime.tryParse(data['tgl']) : null,
-                                      label: data['label'],
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          data['title'] ?? '',
+                                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                      GestureDetector(
+                                        onTap: () => firestoreService.deleteNote(id),
+                                        child: Icon(Icons.close, size: 16, color: Colors.grey[400]),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Expanded(
+                                    child: Text(
+                                      data['content'] ?? '',
+                                      style: TextStyle(fontSize: 13, color: Colors.grey[600], height: 1.3),
+                                      maxLines: 4,
+                                      overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
-                                  IconButton(
-                                    icon: const Icon(Icons.delete, size: 18, color: Colors.red),
-                                    onPressed: () => firestoreService.deleteNote(id),
+                                  const SizedBox(height: 8),
+                                  // Tanggal minimalis
+                                  Text(
+                                    data['tgl'] ?? '',
+                                    style: TextStyle(fontSize: 10, color: Colors.grey[400], fontWeight: FontWeight.w500),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  // Label sebagai text dengan style berbeda, bukan chip yang mencolok
+                                  Text(
+                                    "#${data['label'] ?? 'Umum'}",
+                                    style: const TextStyle(
+                                      fontSize: 11, 
+                                      color: Colors.blueGrey, 
+                                      fontWeight: FontWeight.w600
+                                    ),
                                   ),
                                 ],
-                              )
-                            ],
+                              ),
+                            ),
                           ),
                         ),
                       );
                     },
                   );
                 } else {
-                  return const Center(child: Text("Belum ada catatan."));
+                  return const Center(child: Text("Belum ada catatan", style: TextStyle(color: Colors.grey)));
                 }
               },
             ),
