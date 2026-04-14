@@ -3,8 +3,6 @@
 Nadief Aqila Rabbani (5025231128) - PPB Firebase CRUD + Auth Project
 
 ## Pics
-
-## Getting Started
 ### Login Page
 <img width="651" height="945" alt="image" src="https://github.com/user-attachments/assets/0da75ea0-5f0b-49bf-8a3e-9e79750c0f1e" />
 ### Create Notes
